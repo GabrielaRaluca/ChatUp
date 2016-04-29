@@ -53,16 +53,11 @@ public class Server {
 		{
 			try{
 				clientSocket = serverSocket.accept();
-				int i;
-				/*for(i = 0; i < threads.size(); i++)
-				{
-					if(threads.get(i) == null)
-						threads.remove(i);
-				}*/
 				
 				threads.add(new ClientThread(clientSocket, threads, this));
 				showMessage("The user " + threads.get(threads.size() - 1).clientSocket.getInetAddress().getHostAddress() + " has connected");
-				threads.get(threads.size() - 1).start();
+				if(threads.size() >= 1)
+					threads.get(threads.size() - 1).start();
 				
 			}
 			catch(IOException e)

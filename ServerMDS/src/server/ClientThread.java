@@ -3,8 +3,8 @@ package server;
 import java.io.*;
 import java.net.Socket;
 import java.util.ArrayList;
-
 import javax.swing.SwingUtilities;
+import JDBC.*;
 
 import gui.*;
 
@@ -16,12 +16,21 @@ public class ClientThread extends Thread{
 	public ArrayList<ClientThread> threads;
 	public String message;
 	public static Server server;
+	public String messageName;
+	public String name;
+	
+	public final String MESSAGEID = "message";
+	public final String LOGINID = "login";
+	public final String DELIM = "?";
+	
+	public boolean correct;
 	
 	public ClientThread(Socket clientSocket, ArrayList<ClientThread> threads, Server server)
 	{
 		this.clientSocket = clientSocket;
 		this.threads = threads;
 		this.server = server;
+		this.correct = false;
 	}
 	
 	public void run()
@@ -31,74 +40,101 @@ public class ClientThread extends Thread{
 			input = new ObjectInputStream(clientSocket.getInputStream());
 			output = new ObjectOutputStream(clientSocket.getOutputStream());
 			
-			synchronized(this)
+			//wait for the username and password
+			while(true)
 			{
-				for(int i = 0; i < threads.size(); i++)
+				messageName = (String) input.readObject();
+				if(messageName.startsWith(LOGINID))
 				{
-					if(threads.get(i) != null &&  threads.get(i) != this)
+					int index = messageName.indexOf(DELIM);
+					String username = messageName.substring(LOGINID.length(), index);
+					String password = messageName.substring(index + 1, messageName.length());
+					//this.name = username;
+					synchronized(this)
 					{
-						threads.get(i).output.writeObject("The user " + threads.get(i).clientSocket.getInetAddress().getHostAddress() + " entered the room");
-						
+						if(Authentication.verify(username, password) == null)
+						{//if we wrote the username and the password correctly, get out of while and set the name
+							this.name = username;
+							break;
+						}
+						else
+						{//if username and password are wrong, send message to let him know
+							output.writeObject("Wrong");
+							output.flush();
+						}
 					}
+					
 				}
+				
 			}
-			
+			output.writeObject("okay");//send confirmation message only when got out while
+			output.flush();
 			//Start the conversation
 			while(true)
 			{
 				message = (String) input.readObject();
 				if(message.contains("QUIT"))
 					break;
-				//if the message is private send it to the given client
-				if(message.startsWith("@"))
+				
+				
+				//if we have to send a message
+				if(message.startsWith(MESSAGEID))
 				{
-					String words[] = message.split("\\s+", 2); //split the message into the ip + message
-					if(words.length > 1 && words[1] != null)
+					String actualMessage = message.substring(MESSAGEID.length());
+					
+					//if the message is private send it to the given client
+					if(message.startsWith("@"))
 					{
-						words[1] = words[1].trim();
-						if(!words[1].isEmpty())
+						String words[] = actualMessage.split("\\s+", 2); //split the message into the ip + message
+						if(words.length > 1 && words[1] != null)
 						{
-							String ip = words[0].substring(1);
-							synchronized(this)
+							words[1] = words[1].trim();
+							if(!words[1].isEmpty())
 							{
-								for(int i = 0; i < threads.size(); i++)
+								String ip = words[0].substring(1);
+								synchronized(this)
 								{
-									if(threads.get(i) != null && threads.get(i) != this && threads.get(i).clientSocket.getInetAddress().getHostAddress().equals(ip))
+									for(int i = 0; i < threads.size(); i++)
 									{
-										threads.get(i).output.writeObject(this.clientSocket.getInetAddress().getHostAddress() + " " + words[1]);
-										break;
+										if(threads.get(i) != null && threads.get(i) != this && threads.get(i).clientSocket.getInetAddress().getHostAddress().equals(ip))
+										{
+											threads.get(i).output.writeObject(this.clientSocket.getInetAddress().getHostAddress() + " " + words[1]);
+											break;
+										}
 									}
 								}
 							}
 						}
+						
 					}
 					
-				}
-				
-				else if(message != null)//public message
-				{
-					synchronized(this)
+					else if(actualMessage != null)//public message
 					{
-						for(int i = 0; i < threads.size(); i++)
+						synchronized(this)
 						{
-							if(threads.get(i) != null && threads.get(i) != this)
+							for(int i = 0; i < threads.size(); i++)
 							{
-								threads.get(i).output.writeObject(this.clientSocket.getInetAddress().getHostAddress() + " " + message);
-								
+								if(threads.get(i).output != null && threads.get(i) != this)
+								{
+									threads.get(i).output.writeObject(this.name + ": " + actualMessage);
+									
+								}
 							}
 						}
 					}
 				}
+			
 			}
 			//announce if someone is leaving the chat room
 			synchronized(this)
 			{
+				
 				for(int i = 0; i < threads.size(); i++)
 				{
 					if(threads.get(i) != null && threads.get(i) != this)
 					{
-						threads.get(i).output.writeObject("The user " + clientSocket.getInetAddress().getHostAddress() + " is leaving the chat");
-						server.showMessage("The user " + clientSocket.getInetAddress().getHostAddress() + " has disconnected");
+						threads.get(i).output.writeObject("The user " + name + " is leaving the chat");
+						//server.showMessage("The user " + clientSocket.getInetAddress().getHostAddress() + " has disconnected");
 					}
 				}
 			}
@@ -106,6 +142,7 @@ public class ClientThread extends Thread{
 			synchronized(this)
 			{
 				threads.remove(this);
+				server.showMessage("The user " + clientSocket.getInetAddress().getHostAddress() + " has disconnected");
 			}
 			close();
 		}
