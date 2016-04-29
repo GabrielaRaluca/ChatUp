@@ -2,6 +2,7 @@ package GUI;
 import client.*;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.KeyEventDispatcher;
@@ -32,7 +33,7 @@ import javax.swing.JScrollPane;
 import java.awt.event.ActionListener;
 
 
-public class Conversation extends JFrame implements Runnable{
+public class Conversation extends JFrame {
 
 	public JPanel contentPane;
 	public JButton sendButton;
@@ -40,34 +41,84 @@ public class Conversation extends JFrame implements Runnable{
 	public JScrollPane scrollPane_1;
 	public JTextArea writeMessage;
 	public JTextArea messages;
-	private final String SERVERIP = "192.168.0.13";
-	private final int PORT = 9999;
+	
 	public String lineSent;
 	public String lineReceived;
+	public final String MESSAGEID = "message";
+	
+	public InputMap inputMap;
+	public ActionMap actionMap;
 
 	public Client client;
 	
-	/*
-	public static void main(String args[])
+	public Conversation(Client client)
 	{
-		Conversation c  = new Conversation();
-		c.setVisible(true);
+		this.client = client;
 	}
-*/
-	@Override
-	public void run() 
+	
+	public void start() 
 	{
-		
+		initialize();
+		setUpHandlers();
+		startReading();
+	}
+	
+	public void startReading()
+	{
+		SwingWorker<Void, String> worker = new SwingWorker<Void, String>()
+		{
+			@Override
+			protected Void doInBackground() throws Exception 
+			{
+				// TODO Auto-generated method stub
+				while(true)
+				{
+					try
+					{
+						synchronized(client.input)
+						{
+							lineReceived = (String) client.input.readObject();
+						}
+						publish(lineReceived);
+					}
+					catch(ClassNotFoundException cnfe)
+					{
+						cnfe.printStackTrace();
+						client.close();
+						break;
+					}
+					catch(IOException ioe)
+					{
+						ioe.printStackTrace();
+						client.close();
+						break;
+					}
+				}
+				return null;
+			}
+			
+			protected void process(List<String> list)
+			{
+				messages.append(lineReceived + "\n");
+			}
+			
+		};
+		worker.execute();
+	}
+	
+	public void initialize()
+	{
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setMinimumSize(new Dimension(500,400));
 		setBounds(100, 100, 613, 464);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
+		contentPane.setBackground(new Color(255, 255, 102));
 		setContentPane(contentPane);
 		sendButton = new JButton("Send");
+		sendButton.setBackground(Color.GRAY);
 		scrollPane = new JScrollPane();
 		scrollPane_1 = new JScrollPane();
-		client = new Client(SERVERIP, PORT);
 		setVisible(true);
 		
 		GroupLayout gl_contentPane = new GroupLayout(contentPane);
@@ -111,14 +162,19 @@ public class Conversation extends JFrame implements Runnable{
 		scrollPane.setViewportView(messages);
 		contentPane.setLayout(gl_contentPane);
 		
-		
-		InputMap inputMap = writeMessage.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
-		ActionMap actionMap = writeMessage.getActionMap();
-		
-		
-		//!!!! to be modified when clicked, send the data through the stream
-		
-		
+		inputMap = writeMessage.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+		actionMap = writeMessage.getActionMap();
+	}
+	
+	public void setUpHandlers()
+	{
+		ctrlEnterHandler();
+		buttonAction();
+		enterAction();
+	}
+	
+	public void ctrlEnterHandler()
+	{
 		Action newLine = new AbstractAction() {
 			public void actionPerformed(ActionEvent e) {
 				writeMessage.append("\n");
@@ -128,12 +184,6 @@ public class Conversation extends JFrame implements Runnable{
 		
 		inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_ENTER, InputEvent.CTRL_DOWN_MASK), "newLine");
 		actionMap.put("newLine", newLine);
-		
-		buttonAction();
-		enterAction();
-		
-		client.setUpStreams();
-		startReading();
 	}
 	
 	public void buttonAction()
@@ -148,9 +198,8 @@ public class Conversation extends JFrame implements Runnable{
 					{
 						lineSent = writeMessage.getText();
 						writeMessage.setText("");
-						client.output.writeObject(lineSent);
+						client.output.writeObject(MESSAGEID + lineSent);
 						client.output.flush();
-						publish(lineSent);
 						return null;
 					}
 					
@@ -177,45 +226,5 @@ public class Conversation extends JFrame implements Runnable{
         Object actionKey = writeMessage.getInputMap(
                 JComponent.WHEN_FOCUSED).get(keyStroke);
         writeMessage.getActionMap().put(actionKey, wrapper);
-	}
-	
-	public void startReading()
-	{
-		SwingWorker<Void, String> worker = new SwingWorker<Void, String>()
-		{
-			@Override
-			protected Void doInBackground() throws Exception 
-			{
-				// TODO Auto-generated method stub
-				while(true)
-				{
-					try
-					{
-						lineReceived = (String) client.input.readObject();
-						publish(lineReceived);
-					}
-					catch(ClassNotFoundException cnfe)
-					{
-						cnfe.printStackTrace();
-						client.close();
-						break;
-					}
-					catch(IOException ioe)
-					{
-						ioe.printStackTrace();
-						client.close();
-						break;
-					}
-				}
-				return null;
-			}
-			
-			protected void process(List<String> list)
-			{
-				messages.append(lineReceived + "\n");
-			}
-			
-		};
-		worker.execute();
 	}
 }
