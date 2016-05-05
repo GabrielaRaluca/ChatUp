@@ -15,6 +15,7 @@ public class ClientThread extends Thread{
 	public Socket clientSocket;
 	public ArrayList<ClientThread> threads;
 	public String message;
+	public SignUpClient clientObject;
 	public static Server server;
 	public String messageName;
 	public String name;
@@ -22,6 +23,7 @@ public class ClientThread extends Thread{
 	public final String MESSAGEID = "message";
 	public final String LOGINID = "login";
 	public final String DELIM = "?";
+	public final String SIGNUPID = "signup";
 	
 	public boolean correct;
 	
@@ -41,7 +43,7 @@ public class ClientThread extends Thread{
 			output = new ObjectOutputStream(clientSocket.getOutputStream());
 			
 			//wait for the username and password
-			while(true)
+			/*while(true)
 			{
 				messageName = (String) input.readObject();
 				if(messageName.startsWith(LOGINID))
@@ -66,26 +68,28 @@ public class ClientThread extends Thread{
 					
 				}
 				
-			}
-			output.writeObject("okay");//send confirmation message only when got out while
-			output.flush();
+			}*/
+			ClientThreadHandlers.authenticationMessage(clientObject, this);
+			
 			//Start the conversation
 			while(true)
 			{
-				message = (String) input.readObject();
+				clientObject = (SignUpClient) input.readObject();
+				message = clientObject.getMessage();
+				String code = clientObject.getCode();
+				/*message = (String) input.readObject();*/
 				if(message.contains("QUIT"))
 					break;
 				
-				
 				//if we have to send a message
-				if(message.startsWith(MESSAGEID))
+				if(code.equals(MESSAGEID))
 				{
-					String actualMessage = message.substring(MESSAGEID.length());
+					
 					
 					//if the message is private send it to the given client
 					if(message.startsWith("@"))
 					{
-						String words[] = actualMessage.split("\\s+", 2); //split the message into the ip + message
+						String words[] = message.split("\\s+", 2); //split the message into the ip + message
 						if(words.length > 1 && words[1] != null)
 						{
 							words[1] = words[1].trim();
@@ -108,7 +112,7 @@ public class ClientThread extends Thread{
 						
 					}
 					
-					else if(actualMessage != null)//public message
+					else if(message != null)//public message
 					{
 						synchronized(this)
 						{
@@ -116,7 +120,7 @@ public class ClientThread extends Thread{
 							{
 								if(threads.get(i).output != null && threads.get(i) != this)
 								{
-									threads.get(i).output.writeObject(this.name + ": " + actualMessage);
+									threads.get(i).output.writeObject(this.name + ": " + message);
 									
 								}
 							}
