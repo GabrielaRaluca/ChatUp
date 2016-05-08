@@ -29,6 +29,7 @@ import java.net.URL;
 import java.util.List;
 import java.awt.event.ActionEvent;
 import client.*;
+import server.SignUpClient;
 
 public class LoginFrame extends JFrame implements Runnable{
 
@@ -209,9 +210,13 @@ public class LoginFrame extends JFrame implements Runnable{
 					@Override
 					protected Void doInBackground() throws Exception 
 					{
+						SignUpClient sendObject = new SignUpClient();
 						username = userInput.getText();
+						sendObject.setUsername(username);
 						password = String.valueOf(passwordField.getPassword());
-						client.output.writeObject(LOGINID + username + DELIMITER + password);
+						sendObject.setPassword(password);
+						sendObject.setCode(LOGINID);
+						client.output.writeObject(sendObject);
 						client.output.flush();
 						return null;
 					}
@@ -231,12 +236,14 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	public void signUpHandler()
 	{
-		btnSignUp.addActionListener(new ActionListener() {
+		btnSignUp.addActionListener(new ActionListener() 
+		{
 
 			@Override
-			public void actionPerformed(ActionEvent e) {
-				close();
-				//SignUpFrame signUpFrame = new SignUpFrame();
+			public void actionPerformed(ActionEvent e) 
+			{
+				SignUpFrame signUpFrame = new SignUpFrame(client);
+				signUpFrame.start();
 			}
 			
 		});

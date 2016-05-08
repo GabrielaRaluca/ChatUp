@@ -1,5 +1,6 @@
 package GUI;
 import client.*;
+import server.SignUpClient;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
@@ -196,9 +197,12 @@ public class Conversation extends JFrame {
 					@Override
 					protected Void doInBackground() throws Exception 
 					{
+						SignUpClient sendObject = new SignUpClient();
 						lineSent = writeMessage.getText();
 						writeMessage.setText("");
-						client.output.writeObject(MESSAGEID + lineSent);
+						sendObject.setCode(MESSAGEID);
+						sendObject.setMessage(lineSent);
+						client.output.writeObject(sendObject);
 						client.output.flush();
 						return null;
 					}
