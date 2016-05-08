@@ -3,6 +3,7 @@ package server;
 import java.io.IOException;
 
 import JDBC.Authentication;
+import JDBC.SignUp;
 
 public class ClientThreadHandlers {
 	private ClientThreadHandlers()
@@ -12,7 +13,11 @@ public class ClientThreadHandlers {
 	{
 		while(true)
 		{
-			clientObject = (SignUpClient) client.input.readObject();
+			synchronized(client.input)
+			{
+				clientObject = (SignUpClient) client.input.readObject();
+			}
+				
 			String code = clientObject.getCode();
 			
 			if(code.equals(client.SIGNUPID))
@@ -21,17 +26,38 @@ public class ClientThreadHandlers {
 				String password = clientObject.getPassword();
 				String email = clientObject.getEmail();
 				String retypedPassword = clientObject.getRetypedPassword();
-				char notAllowed[] = {'?', '!', '<', '>', '=', '\'', '\"', ',', ';', '.'};
+				boolean send = true;
+				
 				synchronized(client)
 				{
 					if(!password.equals(retypedPassword))
-						client.output.writeObject("Password missmatch");
+						{
+							client.output.writeObject("Password mismatch");
+							send = false;
+						}
 					
 					for(int i = 0; i < username.length(); i++)
 					{
 						if(!Character.isDigit(username.charAt(i)) && !Character.isLetter(username.charAt(i)))
-							client.output.writeObject("Invalid username");
+							{
+								client.output.writeObject("Invalid username");
+								send = false;
+							}
 					}
+					if(send)
+					{
+						String result = SignUp.verify(username, email, password);
+						if(result == null)
+						{
+							client.output.writeObject("okay");
+						}
+						else
+						{
+							client.output.writeObject(result);
+						}
+					}
+					
+					
 				}
 				
 			}

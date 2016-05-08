@@ -74,7 +74,11 @@ public class ClientThread extends Thread{
 			//Start the conversation
 			while(true)
 			{
-				clientObject = (SignUpClient) input.readObject();
+				synchronized(input)
+				{
+					clientObject = (SignUpClient) input.readObject();
+				}
+				
 				message = clientObject.getMessage();
 				String code = clientObject.getCode();
 				/*message = (String) input.readObject();*/

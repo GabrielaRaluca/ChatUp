@@ -38,7 +38,7 @@ public class SignUp {
 					}
 				else
 				{
-					return "Username already taken";
+					return "Invalid username";
 				}
 			}catch(SQLException e)
 			{
@@ -100,15 +100,17 @@ public class SignUp {
 			return null;		
 	}
 	
-	public String verify(String username, String email, String password)
+	public static String verify(String username, String email, String password)
 	{
-		if(verifyUsername(username) != null)
+		String result = verifyUsername(username);
+		if(result != null)
 		{
-			return verifyUsername(username);
+			return result;
 		}
-		if(verifyEmail(email) != null)
+		result = verifyEmail(email);
+		if(result != null)
 		{
-			return verifyEmail(email);
+			return result;
 		}
 		String query = "INSERT INTO utilizatori (username, email, password) VALUES(?,?,?)";
 		
