@@ -7,7 +7,7 @@ import client.*;
 public class Main 
 {
 
-	private final static String SERVERIP = "192.168.0.13";
+	private final static String SERVERIP = "192.168.0.104";
 	private final static int PORT = 9999;
 	
 	static Client client;
