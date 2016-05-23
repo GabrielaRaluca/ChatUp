@@ -30,6 +30,8 @@ import java.util.List;
 import java.awt.event.ActionEvent;
 import client.*;
 import server.SignUpClient;
+import systemtrays.LoggedSystemTray;
+import systemtrays.NotLoggedSystemTray;
 
 public class LoginFrame extends JFrame implements Runnable{
 
@@ -47,14 +49,18 @@ public class LoginFrame extends JFrame implements Runnable{
 	private JButton btnLogin;
 	
 	private final String LOGINID = "login";
-	private final String DELIMITER = "?";
 	
 	private String username;
 	private String password;
 	String lineReceived;
+	SignUpClient receivedObject;
 	
 	Client client;
 	SwingWorker<Void, String> workerReader;
+	static FriendsFrame friendsFrame;
+	NotLoggedSystemTray notLoggedTray;
+	
+	private final String OKAY = "okay";
 	
 	public LoginFrame(Client client)
 	{
@@ -62,10 +68,20 @@ public class LoginFrame extends JFrame implements Runnable{
 		this.client = client;
 	}
 	
+	public static FriendsFrame getFriendsFrame()
+	{
+		return friendsFrame;
+	}
+	
 	public void run()
 	{
 		initialize();
-		client.setUpStreams();
+		setUpHandlers();
+	}
+	
+	public void start()
+	{
+		initialize();
 		setUpHandlers();
 	}
 	
@@ -193,6 +209,7 @@ public class LoginFrame extends JFrame implements Runnable{
 					.addContainerGap(59, Short.MAX_VALUE))
 		);
 		contentPane.setLayout(gl_contentPane);
+		notLoggedTray = new NotLoggedSystemTray(client);
 	}
 	
 	public void setUpHandlers()
@@ -216,15 +233,13 @@ public class LoginFrame extends JFrame implements Runnable{
 						password = String.valueOf(passwordField.getPassword());
 						sendObject.setPassword(password);
 						sendObject.setCode(LOGINID);
-						client.output.writeObject(sendObject);
-						client.output.flush();
+						Client.output.writeObject(sendObject);
+						Client.output.flush();
 						return null;
 					}
 					
 					protected void done()
 					{
-						userInput.setText("");
-						passwordField.setText("");
 						response();
 					}
 				};
@@ -258,44 +273,48 @@ public class LoginFrame extends JFrame implements Runnable{
 			protected Void doInBackground() throws Exception 
 			{
 				// TODO Auto-generated method stub
-				while(true)
-				{
 					try
 					{
-						synchronized(client.input)
+						synchronized(Client.input)
 						{
-							lineReceived = (String) client.input.readObject();
+							receivedObject = new SignUpClient();
+							receivedObject = (SignUpClient) Client.input.readObject();
 						}
-						if (lineReceived.equals("okay"))
-							break;
-						else
-							lblWrongInfo.setVisible(true);
+					
 					}
 					catch(ClassNotFoundException cnfe)
 					{
 						cnfe.printStackTrace();
-						client.close();
-						break;
+						Client.close();
 					}
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
-						client.close();
-						break;
+						Client.close();
 					}
-					
-				}	
+						
 				return null;
 			}
 			
 			protected void done()
 			{
-					close();
-					Conversation conversationFrame = new Conversation(client);
-					conversationFrame.start();
+				if(receivedObject.getCode().equals(OKAY))
+				{
+					//close();
+					dispose();
+					//setVisible(false);
+					NotLoggedSystemTray.removeSystemTrayIcon();
+					friendsFrame = new FriendsFrame(client);
+					friendsFrame.setTitle("ChatUp! - " + username);
+					friendsFrame.start();
+				}
+				else
+						lblWrongInfo.setVisible(true);
 			}
 		};
 		workerReader.execute();
 	}
+	
+	
 
 }

@@ -8,9 +8,12 @@ import java.awt.Dimension;
 import java.awt.EventQueue;
 import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.EOFException;
 import java.io.IOException;
 import java.util.List;
@@ -27,6 +30,7 @@ import javax.swing.GroupLayout.Alignment;
 import javax.swing.InputMap;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 import javax.swing.JButton;
 import javax.swing.JComponent;
@@ -51,17 +55,24 @@ public class Conversation extends JFrame {
 	public ActionMap actionMap;
 
 	public Client client;
+	private String destinationUsername;
 	
-	public Conversation(Client client)
+	public Conversation(Client client, String destinationUsername)
 	{
 		this.client = client;
+		this.destinationUsername = destinationUsername;
+	}
+	
+	public String getDestinationUsername()
+	{
+		return destinationUsername;
 	}
 	
 	public void start() 
 	{
 		initialize();
 		setUpHandlers();
-		startReading();
+		//startReading();
 	}
 	
 	public void startReading()
@@ -76,22 +87,22 @@ public class Conversation extends JFrame {
 				{
 					try
 					{
-						synchronized(client.input)
+						synchronized(Client.input)
 						{
-							lineReceived = (String) client.input.readObject();
+							lineReceived = (String) Client.input.readObject();
 						}
 						publish(lineReceived);
 					}
 					catch(ClassNotFoundException cnfe)
 					{
 						cnfe.printStackTrace();
-						client.close();
+						Client.close();
 						break;
 					}
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
-						client.close();
+						Client.close();
 						break;
 					}
 				}
@@ -109,12 +120,14 @@ public class Conversation extends JFrame {
 	
 	public void initialize()
 	{
-		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		setIconImage(Toolkit.getDefaultToolkit().getImage(Conversation.class.getResource("/resources/ChatUp!.png")));
+		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setMinimumSize(new Dimension(500,400));
+		setTitle(destinationUsername);
 		setBounds(100, 100, 613, 464);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-		contentPane.setBackground(new Color(255, 255, 102));
+		contentPane.setBackground(Color.DARK_GRAY);
 		setContentPane(contentPane);
 		sendButton = new JButton("Send");
 		sendButton.setBackground(Color.GRAY);
@@ -150,12 +163,14 @@ public class Conversation extends JFrame {
 		);
 		
 		writeMessage = new JTextArea();
+		writeMessage.setBackground(new Color(255, 255, 102));
 		writeMessage.setWrapStyleWord(true);
 		writeMessage.setLineWrap(true);
 		
 		scrollPane_1.setViewportView(writeMessage);
 		
 		messages = new JTextArea();
+		messages.setBackground(new Color(255, 255, 102));
 		messages.setWrapStyleWord(true);
 		messages.setLineWrap(true);
 		messages.setEditable(false);
@@ -165,6 +180,16 @@ public class Conversation extends JFrame {
 		
 		inputMap = writeMessage.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 		actionMap = writeMessage.getActionMap();
+		
+		addWindowListener(new WindowAdapter()
+	    {
+	        @Override
+	        public void windowClosing(WindowEvent e)
+	        {
+	            close();
+	            e.getWindow().dispose();
+	        }
+	    });
 	}
 	
 	public void setUpHandlers()
@@ -198,12 +223,13 @@ public class Conversation extends JFrame {
 					protected Void doInBackground() throws Exception 
 					{
 						SignUpClient sendObject = new SignUpClient();
+						sendObject.setDestinationUsername(destinationUsername);
 						lineSent = writeMessage.getText();
 						writeMessage.setText("");
 						sendObject.setCode(MESSAGEID);
 						sendObject.setMessage(lineSent);
-						client.output.writeObject(sendObject);
-						client.output.flush();
+						Client.output.writeObject(sendObject);
+						Client.output.flush();
 						return null;
 					}
 					
@@ -231,4 +257,22 @@ public class Conversation extends JFrame {
                 JComponent.WHEN_FOCUSED).get(keyStroke);
         writeMessage.getActionMap().put(actionKey, wrapper);
 	}
+	
+	public void showMessage(String message)
+	{
+		SwingUtilities.invokeLater(new Runnable() {
+			
+			@Override
+			public void run()
+			{
+				messages.append(message + "\n");	
+			}
+		});
+	}
+	
+	public void close()
+	{
+		FriendsFrame.removeMap(this);
+	}
+	
 }
