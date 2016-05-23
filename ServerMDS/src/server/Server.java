@@ -2,11 +2,13 @@ package server;
 
 import gui.*;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+
 import java.io.IOException;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Vector;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.SwingUtilities;
 
@@ -14,27 +16,18 @@ public class Server {
 
 	public static ServerSocket serverSocket;
 	public static Socket clientSocket;
+	private ExecutorService threadPool;
 	public ArrayList<ClientThread> threads = new ArrayList<ClientThread>();
-	public ServerFrame frame;
+	private static Vector<ClientThread> connectedUsers = new Vector<ClientThread>();
+	public static ServerFrame frame;
 	public final int portNumber = 9999;
-	public boolean running;
+	public volatile boolean  running;
 	
 	public Server()
 	{
-		frame = new ServerFrame();
+		frame = new ServerFrame(this);
 		frame.setVisible(true);
-		frame.stopButton.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				
-				running = false;
-				try {
-					serverSocket.close();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-			}
-		});
+		threadPool = Executors.newCachedThreadPool();
 		running = true;
 		
 		try
@@ -47,6 +40,19 @@ public class Server {
 		}
 	}
 	
+	public ExecutorService getThreadPool()
+	{
+		return threadPool;
+	}
+	
+	public Vector<ClientThread> getConnectedUsers()
+	{
+		return connectedUsers;
+	}
+	public ArrayList<ClientThread> getThreads()
+	{
+		return this.threads;
+	}
 	public void start()
 	{
 		while(running)
@@ -54,10 +60,11 @@ public class Server {
 			try{
 				clientSocket = serverSocket.accept();
 				
-				threads.add(new ClientThread(clientSocket, threads, this));
+				threads.add(new ClientThread(clientSocket, threads, connectedUsers, this));
 				showMessage("The user " + threads.get(threads.size() - 1).clientSocket.getInetAddress().getHostAddress() + " has connected");
 				if(threads.size() >= 1)
-					threads.get(threads.size() - 1).start();
+					threadPool.execute(threads.get(threads.size() - 1));
+					//threads.get(threads.size() - 1).start();
 				
 			}
 			catch(IOException e)
@@ -66,13 +73,17 @@ public class Server {
 			}
 		}
 	}
-	public void showMessage(String m)
+	public static void addConnectedUser(ClientThread newConnectedUser)
+	{
+		connectedUsers.add(newConnectedUser);
+	}
+	public static void showMessage(String m)
 	{
 		SwingUtilities.invokeLater(new Runnable(){
 
 			@Override
 			public void run() {
-				frame.info.append(m + "\n");
+				ServerFrame.info.append(m + "\n");
 				
 			}
 			
