@@ -7,7 +7,7 @@ import client.*;
 public class Main 
 {
 
-	private final static String SERVERIP = "192.168.0.104";
+	private final static String SERVERIP = "192.168.0.13";
 	private final static int PORT = 9999;
 	
 	static Client client;
@@ -15,6 +15,7 @@ public class Main
 	public static void main(String[] args) 
 	{
 		client = new Client(SERVERIP, PORT);
+		client.setUpStreams();
 		SwingUtilities.invokeLater(new LoginFrame(client));
 	}
 

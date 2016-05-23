@@ -64,7 +64,12 @@ public class SignUpFrame extends JFrame
 	Client client;
 	SwingWorker<Void, String> workerReader;
 	String lineReceived;
+	SignUpClient objectReceived;
 	private final String SIGNUPID = "signup";
+	private final String INVALID = "Invalid username";
+	private final String TAKEN = "Email already taken";
+	private final String MISMATCH = "Password mismatch";
+	private final String OKAY = "okay";
 
 	public SignUpFrame(Client client)
 	{
@@ -90,6 +95,7 @@ public class SignUpFrame extends JFrame
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 		setBounds(100, 100, 350, 550);
 		setMinimumSize(new Dimension(350, 550));
+		setIconImage(Toolkit.getDefaultToolkit().getImage(SignUpFrame.class.getResource("/resources/ChatUp!.png")));
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		contentPane.setBackground(new Color(255, 255, 102));
@@ -111,7 +117,7 @@ public class SignUpFrame extends JFrame
 		contentPane.add(panel, gbc_panel);
 		
 		
-		URL url = LoginFrame.class.getResource("/resources/ChatUp!.png");
+		URL url = SignUpFrame.class.getResource("/resources/ChatUp!.png");
 		ImageIcon imageIcon = new ImageIcon(url);
 		Image scaledImage = imageIcon.getImage().getScaledInstance(70, 70, java.awt.Image.SCALE_SMOOTH);
 		ImageIcon logo = new ImageIcon(scaledImage);
@@ -267,8 +273,8 @@ public class SignUpFrame extends JFrame
 						String email = emailField.getText();
 						sendObject.setEmail(email);
 						sendObject.setCode(SIGNUPID);
-						client.output.writeObject(sendObject);
-						client.output.flush();
+						Client.output.writeObject(sendObject);
+						Client.output.flush();
 						return null;
 					}
 					
@@ -294,17 +300,17 @@ public class SignUpFrame extends JFrame
 				{
 					try
 					{
-						synchronized(client.input)
+						synchronized(Client.input)
 						{
-							lineReceived = (String) client.input.readObject();
+							objectReceived = (SignUpClient) Client.input.readObject();
 						}
-						if (lineReceived.equals("okay"))
+						if (objectReceived.getCode().equals(OKAY))
 							break;
-						if (lineReceived.equals("Invalid username"))
+						if (objectReceived.getCode().equals(INVALID))
 							panelErrorUsername.setVisible(true);
-						if (lineReceived.equals("Password mismatch"))
+						if (objectReceived.getCode().equals(MISMATCH))
 							lblErrorPassword.setVisible(true);
-						if (lineReceived.equals("Email already taken"))
+						if (objectReceived.getCode().equals(TAKEN))
 							lblErrorEmail.setVisible(true);
 						passwordField1.setText("");
 						passwordField2.setText("");
@@ -312,13 +318,13 @@ public class SignUpFrame extends JFrame
 					catch(ClassNotFoundException cnfe)
 					{
 						cnfe.printStackTrace();
-						client.close();
+						Client.close();
 						break;
 					}
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
-						client.close();
+						Client.close();
 						break;
 					}
 				}

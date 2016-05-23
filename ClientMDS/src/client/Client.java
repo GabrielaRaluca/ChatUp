@@ -11,15 +11,16 @@ import GUI.*;
 
 public class Client
 {
-	public Socket clientSocket;
-	public ObjectOutputStream output;
-	public ObjectInputStream input;
+	public static Socket clientSocket;
+	public static ObjectOutputStream output;
+	public static ObjectInputStream input;
 	public static boolean closed = false;
 	
 	public static Conversation convo;
 	public String serverIP;
 	public int portNumber;
 	public static String message;
+	
 
 	public Client(String IP, int port)
 	{
@@ -35,7 +36,7 @@ public class Client
 		}
 	}
 	
-	public void close()
+	public static void close()
 	{
 		try
 		{
