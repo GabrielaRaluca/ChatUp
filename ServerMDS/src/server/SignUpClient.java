@@ -16,6 +16,33 @@ public class SignUpClient implements Serializable {
 	private String destinationUsername;
 	private ArrayList<String> onlineFriends;
 	private ArrayList<String> offlineFriends;
+	private ArrayList<String> pending;
+	private ArrayList<String> blockedFriends;
+	private ArrayList<String> oldMessages;
+
+	public ArrayList<String> getOldMessages() {
+		return oldMessages;
+	}
+
+	public void setOldMessages(ArrayList<String> oldMessages) {
+		this.oldMessages = oldMessages;
+	}
+
+	public ArrayList<String> getBlockedFriends() {
+		return blockedFriends;
+	}
+
+	public void setBlockedFriends(ArrayList<String> blockedFriends) {
+		this.blockedFriends = blockedFriends;
+	}
+
+	public ArrayList<String> getPending() {
+		return pending;
+	}
+
+	public void setPending(ArrayList<String> pending) {
+		this.pending = pending;
+	}
 
 	public ArrayList<String> getOnlineFriends() {
 		return onlineFriends;

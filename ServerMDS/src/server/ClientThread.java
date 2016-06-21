@@ -13,27 +13,27 @@ public class ClientThread implements Runnable{
 
 	public ObjectInputStream input;
 	public ObjectOutputStream output;
+	
 	public Socket clientSocket;
+	
 	public ArrayList<ClientThread> threads;
 	protected Vector<ClientThread> connectedUsers;
 	public ArrayList<ClientThread> friends; //used to send that i'm online to all my friends
 	protected ArrayList<String> friendsNames;
-	public String message;
+	
 	public SignUpClient clientObject;
+	
 	public static Server server;
+	
+	public String message;
 	public String messageName;
 	public String name;
 	
-	public final String MESSAGEID = "message";
-	public final String LOGINID = "login";
-	public final String DELIM = "?";
-	public final String SIGNUPID = "signup";
-	private final String NEWUSER = "newUser";
-	private final String EXITID = "exit";
-	
-	public boolean correct;
 	public boolean loggedIn = false;
-	public boolean hasSentFriendsList = false;
+
+	
+	public ClientThread()
+	{}
 	
 	public ClientThread(Socket clientSocket, ArrayList<ClientThread> threads, Vector<ClientThread> connectedUsers, Server server)
 	{
@@ -41,7 +41,7 @@ public class ClientThread implements Runnable{
 		this.threads = threads;
 		this.connectedUsers = connectedUsers;
 		ClientThread.server = server;
-		this.correct = false;
+
 	}
 	
 	public void run()
@@ -109,8 +109,8 @@ public class ClientThread implements Runnable{
 						}
 						
 					}
-					
-					else if(message != null)//public message
+					JDBCHandlers.insertMessages(this.name, destination, message);
+				/*	else if(message != null)//public message
 					{
 						synchronized(this)
 						{
@@ -126,9 +126,56 @@ public class ClientThread implements Runnable{
 								}
 							}
 						}
-					}
+					}*/
+				}
+				if(code.equals(Codes.ADDFRIEND))
+				{
+					ClientThreadHandlers.addNewFriend(this, clientObject);	
+					
 				}
 				
+				if(code.equals(Codes.ACCEPT))
+				{
+					JDBCHandlers.confirmFriendRequest(this.name, clientObject.getUsername());
+					ClientThreadHandlers.updateOnlineFriendsList(this, clientObject);
+					
+					
+				}
+				if(code.equals(Codes.DECLINE))
+				{
+					JDBCHandlers.declineFriendRequest(this.name, clientObject.getUsername());
+				}
+				if(code.equals(Codes.BLOCK))
+				{
+					ClientThreadHandlers.blockFriend(this, clientObject);
+					ClientThread blockedUser = ClientThreadHandlers.getFriendByUsername(clientObject.getUsername(), connectedUsers);
+					if(blockedUser != null)//daca era online cel caruai i-am dat block, o sa ii aparem offline
+					{
+						ClientThreadHandlers.announceBlockedFriendOffline(this, blockedUser);
+					}
+				}
+				if(code.equals(Codes.REMOVEFROMBLOCK))
+				{
+					String friendsName = clientObject.getUsername();
+					
+					JDBCHandlers.unblockFriend(this.name, friendsName);
+				}
+				if(code.equals(Codes.GETMESSAGES))
+				{
+					SignUpClient response = new SignUpClient();
+					String friendsName = clientObject.getUsername();
+					response.setCode(Codes.GETMESSAGES);
+					response.setUsername(friendsName);
+					ArrayList<String> messages = JDBCHandlers.getMessages(this.name, friendsName);
+					response.setOldMessages(messages);
+					synchronized(this)
+					{
+						output.reset();
+						output.writeObject(response);
+						output.flush();
+					}
+				}
+				/*PENTRU BLOCK, SI MESAJE TREBUIE DATE DOAR NUMELE NU SI OBIECTELE!!!!*/
 				if (code.equals(Codes.LOGGEDOUT)) {
 					// check the list with the names of the friends again 
 					// Look through the connected users list and see which users are
@@ -145,7 +192,7 @@ public class ClientThread implements Runnable{
 					
 				}
 				
-				if(code.equals(EXITID))
+				if(code.equals(Codes.EXITID))
 				{
 					break;
 				}
