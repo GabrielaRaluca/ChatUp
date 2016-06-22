@@ -50,7 +50,11 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	private final String LOGINID = "login";
 	
-	private String username;
+	public static String getUsername() {
+		return username;
+	}
+
+	private static String username;
 	private String password;
 	String lineReceived;
 	SignUpClient receivedObject;
@@ -64,7 +68,6 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	public LoginFrame(Client client)
 	{
-		
 		this.client = client;
 	}
 	

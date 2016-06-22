@@ -29,7 +29,7 @@ public class LoggedSystemTray
 	public LoggedSystemTray(Client client)
 	{
 		this.client = client;
-		URL url = LoginFrame.class.getResource("/resources/onlineicon.png");
+		URL url = LoginFrame.class.getResource("/resources/trayon.png");
 
         if (SystemTray.isSupported()) {
         	

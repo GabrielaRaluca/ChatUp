@@ -116,7 +116,6 @@ public class SignUpFrame extends JFrame
 		gbc_panel.gridy = 0;
 		contentPane.add(panel, gbc_panel);
 		
-		
 		URL url = SignUpFrame.class.getResource("/resources/ChatUp!.png");
 		ImageIcon imageIcon = new ImageIcon(url);
 		Image scaledImage = imageIcon.getImage().getScaledInstance(70, 70, java.awt.Image.SCALE_SMOOTH);

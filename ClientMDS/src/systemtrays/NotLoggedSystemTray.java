@@ -29,7 +29,7 @@ public class NotLoggedSystemTray
 	public NotLoggedSystemTray(Client client)
 	{
 		this.client = client;
-		URL url = LoginFrame.class.getResource("/resources/offlineicon.png");
+		URL url = LoginFrame.class.getResource("/resources/trayoff.png");
 		
 		if (SystemTray.isSupported()) 
 		{
@@ -63,12 +63,13 @@ public class NotLoggedSystemTray
   					// TODO Auto-generated catch block
   					e1.printStackTrace();
   				}
-              	ArrayList<Conversation> removeConversations = new ArrayList<Conversation>();
-              	removeConversations.addAll(FriendsFrame.conversationMap.values());
-              	
-              	for (int i = 0; i < removeConversations.size(); i++)
+              	if (FriendsFrame.conversationMap != null)
               	{
-              		removeConversations.get(i).dispose();
+              		ArrayList<Conversation> removeConversations = new ArrayList<Conversation>();
+              		removeConversations.addAll(FriendsFrame.conversationMap.values());
+              	
+              		for (int i = 0; i < removeConversations.size(); i++)
+              			removeConversations.get(i).dispose();
               	}
               	Client.close();
               	FriendsFrame.getLoginFrame().dispose();

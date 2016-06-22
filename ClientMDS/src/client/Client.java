@@ -50,18 +50,6 @@ public class Client
 		}
 	}
 	
-	public void showMessage(final String m)
-	{
-		SwingUtilities.invokeLater(
-				new Runnable()
-				{
-					public void run()
-					{
-						convo.messages.append(m);
-					}
-				}
-		);
-	}
 
 	public void setUpStreams()
 	{
