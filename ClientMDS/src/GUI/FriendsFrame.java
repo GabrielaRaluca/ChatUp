@@ -28,9 +28,11 @@ import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
+import javax.swing.JTabbedPane;
 import javax.swing.KeyStroke;
 import javax.swing.SwingWorker;
 import javax.swing.GroupLayout.Alignment;
@@ -38,8 +40,11 @@ import javax.swing.ImageIcon;
 import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.html.HTMLDocument;
 
 import client.Client;
+import emoji.EmojiMap;
 import server.SignUpClient;
 import systemtrays.LoggedSystemTray;
 
@@ -53,11 +58,15 @@ public class FriendsFrame extends JFrame {
 	
 	private JLabel lblFriends;
 	private JList<String> list;
+	private JList<String> pendingList;
+	private JList<String> blockedList;
 	
 	private JSeparator separator;
 	private JScrollPane scrollPane;
 	
-	private DefaultListModel<String> model;
+	private DefaultListModel<String> friendsModel;
+	private DefaultListModel<String> pendingModel;
+	private DefaultListModel<String> blockedModel;
 	
 	private final String MESSAGEID = "message";
 	private final String NEWUSER = "newUser";
@@ -67,11 +76,20 @@ public class FriendsFrame extends JFrame {
 
 	private ArrayList<String> onlineFriends;
 	private ArrayList<String> offlineFriends;
+	private ArrayList<String> requestingFriends;
+	private ArrayList<String> blockedFriends;
 	Client client;
 	public static LoggedSystemTray loggedTray;
 	SignUpClient friendsList;
 	SignUpClient objectReceived;
+	SignUpClient sendObject;
+	AddFriend addFriend;
+	BlockFriend blockFriend;
 	static LoginFrame frameLogin;
+	
+	private JTabbedPane tabbedPane;
+
+
 	public static HashMap<String, Conversation> conversationMap;
 	
 	private InputMap inputMap;
@@ -99,7 +117,8 @@ public class FriendsFrame extends JFrame {
 	{
 		setIconImage(Toolkit.getDefaultToolkit().getImage(FriendsFrame.class.getResource("/resources/ChatUp!.png")));
 		setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-		setBounds(100, 100, 300, 500);
+		setBounds(100, 100, 310, 500);
+		setMinimumSize(new Dimension(310, 500));
 		contentPane = new JPanel();
 		contentPane.setBackground(Color.DARK_GRAY);
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
@@ -114,21 +133,31 @@ public class FriendsFrame extends JFrame {
 		btnAddFriend.setFocusPainted(false);
 		btnAddFriend.setIcon(imageIcon);
 		
-		btnBlockFriend = new JButton("Block Friend");
+		btnBlockFriend = new JButton("");
 		btnBlockFriend.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
+		imageIcon = new ImageIcon(FriendsFrame.class.getResource("/resources/blockuser.png"));
+		btnBlockFriend.setOpaque(false);
+		btnBlockFriend.setContentAreaFilled(false);
+		btnBlockFriend.setBorderPainted(false);
+		btnBlockFriend.setFocusPainted(false);
+		btnBlockFriend.setIcon(imageIcon);
 		
-		btnLogout = new JButton("Logout");
+		btnLogout = new JButton("");
 		btnLogout.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
+		imageIcon = new ImageIcon(FriendsFrame.class.getResource("/resources/exitb.png"));
+		btnLogout.setOpaque(false);
+		btnLogout.setContentAreaFilled(false);
+		btnLogout.setBorderPainted(false);
+		btnLogout.setFocusPainted(false);
+		btnLogout.setIcon(imageIcon);
 		
 		separator = new JSeparator();
 		separator.setForeground(new Color(255, 255, 102));
 		
-		lblFriends = new JLabel("Friends");
-		lblFriends.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
-		lblFriends.setForeground(new Color(255, 255, 102));
-		lblFriends.setBackground(new Color(255, 255, 102));
-		
-		scrollPane = new JScrollPane();
+		tabbedPane = new JTabbedPane(JTabbedPane.TOP);
+		tabbedPane.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
+		tabbedPane.setForeground(Color.DARK_GRAY);
+		tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
 		GroupLayout gl_contentPane = new GroupLayout(contentPane);
 		gl_contentPane.setHorizontalGroup(
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
@@ -136,47 +165,69 @@ public class FriendsFrame extends JFrame {
 					.addContainerGap()
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.TRAILING)
 						.addGroup(gl_contentPane.createSequentialGroup()
-							.addComponent(lblFriends, GroupLayout.DEFAULT_SIZE, 76, Short.MAX_VALUE)
-							.addGap(188))
+							.addGap(2)
+							.addComponent(tabbedPane))
+						.addComponent(separator, GroupLayout.DEFAULT_SIZE, 265, Short.MAX_VALUE)
 						.addGroup(gl_contentPane.createSequentialGroup()
-							.addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
-								.addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 254, Short.MAX_VALUE)
-								.addComponent(separator, GroupLayout.DEFAULT_SIZE, 254, Short.MAX_VALUE)
-								.addGroup(gl_contentPane.createSequentialGroup()
-									.addComponent(btnAddFriend, GroupLayout.PREFERRED_SIZE, 90, GroupLayout.PREFERRED_SIZE)
-									.addPreferredGap(ComponentPlacement.RELATED)
-									.addComponent(btnBlockFriend, GroupLayout.PREFERRED_SIZE, 87, GroupLayout.PREFERRED_SIZE)
-									.addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-									.addComponent(btnLogout, GroupLayout.PREFERRED_SIZE, 76, GroupLayout.PREFERRED_SIZE)))
-							.addContainerGap())))
+							.addComponent(btnAddFriend, GroupLayout.PREFERRED_SIZE, 90, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(ComponentPlacement.RELATED)
+							.addComponent(btnBlockFriend, GroupLayout.PREFERRED_SIZE, 87, GroupLayout.PREFERRED_SIZE)
+							.addPreferredGap(ComponentPlacement.RELATED, GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+							.addComponent(btnLogout, GroupLayout.PREFERRED_SIZE, 76, GroupLayout.PREFERRED_SIZE)))
+					.addGap(9))
 		);
 		gl_contentPane.setVerticalGroup(
 			gl_contentPane.createParallelGroup(Alignment.LEADING)
 				.addGroup(gl_contentPane.createSequentialGroup()
-					.addGap(26)
 					.addGroup(gl_contentPane.createParallelGroup(Alignment.LEADING)
-						.addGroup(gl_contentPane.createParallelGroup(Alignment.BASELINE)
-							.addComponent(btnAddFriend)
-							.addComponent(btnBlockFriend))
+						.addComponent(btnAddFriend)
+						.addComponent(btnBlockFriend)
 						.addComponent(btnLogout))
-					.addGap(8)
-					.addComponent(separator, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
-					.addGap(9)
-					.addComponent(lblFriends)
 					.addPreferredGap(ComponentPlacement.RELATED)
-					.addComponent(scrollPane, GroupLayout.DEFAULT_SIZE, 348, Short.MAX_VALUE)
+					.addComponent(separator, GroupLayout.PREFERRED_SIZE, GroupLayout.DEFAULT_SIZE, GroupLayout.PREFERRED_SIZE)
+					.addPreferredGap(ComponentPlacement.RELATED)
+					.addComponent(tabbedPane, GroupLayout.DEFAULT_SIZE, 368, Short.MAX_VALUE)
 					.addContainerGap())
 		);
+		
+		onlineFriends = new ArrayList<String>();
+		offlineFriends = new ArrayList<String>();
+		requestingFriends = new ArrayList<String>();
+		blockedFriends = new ArrayList<String>();
+		
+		friendsModel = new DefaultListModel<String>();
+		pendingModel = new DefaultListModel<String>();
+		blockedModel = new DefaultListModel<String>();
+		
+		scrollPane = new JScrollPane();
+		tabbedPane.addTab("Friends", null, scrollPane, null);
 		
 		list = new JList<String>();
 		list.setBackground(new Color(255, 255, 102));
 		list.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
-		model = new DefaultListModel<String>();
-		list.setModel(model);
+		
+		list.setModel(friendsModel);
 		list.setSelectionBackground(Color.GRAY);
 		list.setSelectionForeground(new Color(255, 255, 102));
 		
 		scrollPane.setViewportView(list);
+		
+		pendingList = new JList<String>();
+		pendingList.setSelectionForeground(new Color(255, 255, 102));
+		pendingList.setSelectionBackground(Color.GRAY);
+		pendingList.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
+		pendingList.setBackground(new Color(255, 255, 102));
+		pendingList.setModel(pendingModel);
+		tabbedPane.addTab("Pending", null, pendingList, null);
+		
+		blockedList = new JList<String>();
+		blockedList.setSelectionForeground(new Color(255, 255, 102));
+		blockedList.setSelectionBackground(Color.GRAY);
+		blockedList.setFont(new Font("MS UI Gothic", Font.PLAIN, 15));
+		blockedList.setBackground(new Color(255, 255, 102));
+		blockedList.setModel(blockedModel);
+		tabbedPane.addTab("Blocked", null, blockedList, null);
+		
 		contentPane.setLayout(gl_contentPane);
 		setVisible(true);
 		
@@ -185,39 +236,73 @@ public class FriendsFrame extends JFrame {
 		
 		inputMap = list.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
 		actionMap = list.getActionMap();
+		
+		EmojiMap.initialize();
 	}
 
 	public void initializeFriendsList(SignUpClient friends)
 	{
-		onlineFriends.addAll(friends.getOnlineFriends());
-		offlineFriends.addAll(friends.getOfflineFriends());
-		updateList(onlineFriends, offlineFriends);
+		if(friends != null)
+		{
+			onlineFriends.addAll(friends.getOnlineFriends());
+			offlineFriends.addAll(friends.getOfflineFriends());
+			requestingFriends.addAll(friends.getPending());
+			blockedFriends.addAll(friends.getBlockedFriends());
+			updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+		}
 	}
 	
-	public void updateList(ArrayList<String> onlineFriends, ArrayList<String> offlineFriends)
+	public void updateList(ArrayList<String> onlineFriends, ArrayList<String> offlineFriends, ArrayList<String> requestingFriends, ArrayList<String> blockedFriends)
 	{
-		
 		int i;
-		model.clear();
-		model.addElement("<html><b>----------Online----------</b></html>");
+		tabbedPane.removeAll();
+		
+		friendsModel.clear();
+		pendingModel.clear();
+		blockedModel.clear();
+		
+		list.setModel(friendsModel);
+		pendingList.setModel(pendingModel);
+		blockedList.setModel(blockedModel);
+		
+		friendsModel.addElement("<html><b>--------Online--------</b></html>");
 		for (i = 0; i < onlineFriends.size(); i++)
 		{
 			String boldFriend = "<html><b>" + onlineFriends.get(i) + "</b></html>";
-			model.addElement(boldFriend);
+			friendsModel.addElement(boldFriend);
 		}
-		model.addElement("<html><b>----------Offline----------</b></html>");
+		
+		friendsModel.addElement("<html><b>--------Offline--------</b></html>");
 		
 		for (i = 0; i < offlineFriends.size(); i++)
 		{
 			String italicFriend = "<html><i>" + offlineFriends.get(i) + "</i></html>";
-			model.addElement(italicFriend);
+			friendsModel.addElement(italicFriend);
 		}
+		
+		for (i = 0; i < requestingFriends.size(); i++)
+		{
+			String possibleFriend = "<html><b>" + requestingFriends.get(i) + "</b></html>";
+			pendingModel.addElement(possibleFriend);
+		}
+		
+		for (i = 0; i < blockedFriends.size(); i++)
+		{
+			String blockedFriend = "<html><b>" + blockedFriends.get(i) + "</b></html>";
+			blockedModel.addElement(blockedFriend);
+		}
+		
+		tabbedPane.addTab("Friends", null, scrollPane, null);
+		tabbedPane.addTab("Pending", null, pendingList, null);
+		tabbedPane.addTab("Blocked", null, blockedList, null);
+			
 	}
 	
 	public void setUpFriendsList()
 	{
 		onlineFriends = new ArrayList<String>();
 		offlineFriends = new ArrayList<String>();
+		requestingFriends = new ArrayList<String>();
 		SwingWorker<Void, String> worker = new SwingWorker<Void, String>()
 		{
 
@@ -239,7 +324,10 @@ public class FriendsFrame extends JFrame {
 				catch(IOException ioe)
 				{
 					ioe.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 					Client.close();
+					dispose();
+					LoggedSystemTray.removeSystemTrayIcon();
 				}
 				return null;
 			}
@@ -256,41 +344,42 @@ public class FriendsFrame extends JFrame {
 	{
 		mouseHandler();
 		logoutHandler();
+		addFriendHandler();
+		blockFriendHandler();
 	}
 	
 	public void mouseHandler()
 	{
-		MouseListener mouseListener = new MouseAdapter()
+		MouseListener friendsListener = new MouseAdapter()
 		{
 			public void mouseClicked(MouseEvent e)
 			{
 				if (e.getClickCount() == 2)
 				{
+					//friends list double click
 					String selectedItem = (String) list.getSelectedValue();
-					if (selectedItem.startsWith("<"))
-					{
-						String content = selectedItem.substring(9);
-						int index = content.indexOf("<");
-						String actualName = content.substring(0, index);
-						selectedItem = actualName;
-					}
+					String content = selectedItem.substring(9);
+					int index = content.indexOf("<");
+					final String actualName = content.substring(0, index);
+					selectedItem = actualName;
+					
 					if (!conversationMap.containsKey(selectedItem))
 					{
 						Conversation conversation = new Conversation(client, selectedItem);
 						conversationMap.put(selectedItem, conversation);
 						conversation.start();
 					}
+						
 				}
+					
 				else if (e.getClickCount() == 3)
 				{
 					String selectedItem = (String) list.getSelectedValue();
-					if (selectedItem.startsWith("<"))
-					{
-						String content = selectedItem.substring(9);
-						int index = content.indexOf("<");
-						String actualName = content.substring(0, index);
-						selectedItem = actualName;
-					}
+					String content = selectedItem.substring(9);
+					int index = content.indexOf("<");
+					String actualName = content.substring(0, index);
+					selectedItem = actualName;
+					
 					if (!conversationMap.containsKey(selectedItem))
 					{
 						Conversation conversation = new Conversation(client, selectedItem);
@@ -300,7 +389,168 @@ public class FriendsFrame extends JFrame {
 				}
 			}
 		};
-		list.addMouseListener(mouseListener);
+		list.addMouseListener(friendsListener);
+		
+		
+		MouseListener pendingListener = new MouseAdapter()
+		{
+			public void mouseClicked(MouseEvent e)
+			{
+				if (e.getClickCount() == 2)
+				{
+					String selectedItem = (String) pendingList.getSelectedValue();
+					String content = selectedItem.substring(9);
+					int index = content.indexOf("<");
+					String actualName = content.substring(0, index);
+					selectedItem = actualName;
+						
+					String answer;
+					int option = JOptionPane.showConfirmDialog(contentPane,"The user" + selectedItem + "wants to add you", "The user" + selectedItem + "wants to add you",JOptionPane.YES_NO_OPTION);
+					if (option == JOptionPane.YES_OPTION)
+					{
+						answer = "accept";
+						for (int i = 0; i < requestingFriends.size(); i++)
+						{
+							if (requestingFriends.get(i).equals(selectedItem))
+							{
+								requestingFriends.remove(i);
+								break;
+							}
+						}
+						offlineFriends.add(selectedItem);
+						updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);		
+					}
+					else
+					{
+						answer = "decline";
+						for (int i = 0; i < requestingFriends.size(); i++)
+						{
+							if (requestingFriends.get(i).equals(selectedItem))
+							{
+								requestingFriends.remove(i);
+								break;
+							}
+						}
+						updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+					}
+					
+					sendObject = new SignUpClient();
+					sendObject.setCode(answer);
+					sendObject.setUsername(selectedItem);
+					SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>()
+					{
+						@Override
+						protected Void doInBackground() throws Exception 
+						{
+							client.output.writeObject(sendObject);
+							return null;
+						}	
+					};
+					worker.execute();
+				}
+				
+				else if(e.getClickCount() == 3)
+				{
+					String selectedItem = (String) pendingList.getSelectedValue();
+					String content = selectedItem.substring(9);
+					int index = content.indexOf("<");
+					String actualName = content.substring(0, index);
+					selectedItem = actualName;
+						
+					String answer;
+					int option = JOptionPane.showConfirmDialog(contentPane,"The user " + selectedItem + " wants to add you", "The user " + selectedItem + " wants to add you",JOptionPane.YES_NO_OPTION);
+					if (option == JOptionPane.YES_OPTION)
+					{
+						answer = "accept";
+						for (int i = 0; i < requestingFriends.size(); i++)
+						{
+							if (requestingFriends.get(i).equals(selectedItem))
+							{
+								requestingFriends.remove(i);
+								break;
+							}
+						}
+						offlineFriends.add(selectedItem);
+						updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);		
+					}
+					else
+					{
+						answer = "decline";
+						for (int i = 0; i < requestingFriends.size(); i++)
+						{
+							if (requestingFriends.get(i).equals(selectedItem))
+							{
+								requestingFriends.remove(i);
+								break;
+							}
+						}
+						updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+					}
+					
+					sendObject = new SignUpClient();
+					sendObject.setCode(answer);
+					sendObject.setUsername(selectedItem);
+					SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>()
+					{
+						@Override
+						protected Void doInBackground() throws Exception 
+						{
+							client.output.writeObject(sendObject);
+							return null;
+						}	
+					};
+					worker.execute();
+				}
+			}
+		};
+		
+		pendingList.addMouseListener(pendingListener);
+		
+		MouseListener blockListener = new MouseAdapter()
+		{
+			public void mouseClicked(MouseEvent e)
+			{
+				if (e.getClickCount() == 2)
+				{
+					String selectedItem = (String) blockedList.getSelectedValue();
+					String content = selectedItem.substring(9);
+					int index = content.indexOf("<");
+					String actualName = content.substring(0, index);
+					selectedItem = actualName;
+						
+					String answer;
+					int option = JOptionPane.showConfirmDialog(contentPane,"Are you sure you want to unblock the user " + selectedItem + "?", "Are you sure you want to unblock the user " + selectedItem + "?" ,JOptionPane.YES_NO_OPTION);
+					if (option == JOptionPane.YES_OPTION)
+					{
+						answer = "removeFromBlock";
+						for (int i = 0; i < blockedFriends.size(); i++)
+						{
+							if (blockedFriends.get(i).equals(selectedItem))
+							{
+								blockedFriends.remove(i);
+								break;
+							}
+						}
+						updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+						
+						sendObject = new SignUpClient();
+						sendObject.setCode(answer);
+						sendObject.setUsername(selectedItem);
+						SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>()
+						{
+							@Override
+							protected Void doInBackground() throws Exception 
+							{
+								client.output.writeObject(sendObject);
+								return null;
+							}	
+						};
+						worker.execute();
+					}	
+				}
+			}
+		};
+		blockedList.addMouseListener(blockListener);
 	}
 	
 	public void keyboardHandler()
@@ -360,7 +610,10 @@ public class FriendsFrame extends JFrame {
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 						Client.close();
+						dispose();
+						LoggedSystemTray.removeSystemTrayIcon();
 						break;
 					}
 				}
@@ -376,12 +629,12 @@ public class FriendsFrame extends JFrame {
 						Conversation conversation = new Conversation(client, objectReceived.getUsername());
 						conversationMap.put(objectReceived.getUsername(), conversation);
 						conversation.start();
-						conversation.showMessage(objectReceived.getMessage());
+						conversation.writeTheMessage(objectReceived.getMessage());
 					}
 					else
 					{
 						Conversation conversation = conversationMap.get(objectReceived.getUsername());
-						conversation.showMessage(objectReceived.getMessage());
+						conversation.writeTheMessage(objectReceived.getMessage());
 					}
 				}
 				
@@ -392,7 +645,7 @@ public class FriendsFrame extends JFrame {
 					for (int i = 0; i < offlineFriends.size(); i++)
 						if(offlineFriends.get(i).equals(objectReceived.getUsername()))
 							offlineFriends.remove(i);
-					updateList(onlineFriends, offlineFriends);
+					updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
 				}
 				
 				if(objectReceived.getCode().equals(USEROFFLINE))
@@ -402,9 +655,81 @@ public class FriendsFrame extends JFrame {
 					for (int i = 0; i < onlineFriends.size(); i++)
 						if(onlineFriends.get(i).equals(objectReceived.getUsername()))
 							onlineFriends.remove(i);
-					updateList(onlineFriends, offlineFriends);
+					updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+				}
+				if(objectReceived.getCode().equals("requestSent"))
+				{
+					addFriend.dispose();
+				}
+				if(objectReceived.getCode().equals("alreadyFriends"))
+				{
+					addFriend.getLblWrongUsername().setText("You are already friends with this username.");
+				}
+
+				if(objectReceived.getCode().equals("addInvalidUsername"))
+				{
+					addFriend.getLblWrongUsername().setText("The username you have entered is invalid.");
 				}
 				
+				if(objectReceived.getCode().equals("newPendingUser"))
+				{
+					requestingFriends.add(objectReceived.getUsername());
+					Collections.sort(requestingFriends);
+					updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+				}
+				
+				if(objectReceived.getCode().equals("blockInvalidUsername"))
+				{
+					blockFriend.getLblWrongUsername().setText("The username you have entered is invalid.");
+				}
+				
+				if(objectReceived.getCode().equals("blockedUser"))
+				{
+					blockFriend.dispose();
+					String userToDelete = objectReceived.getUsername();
+					blockedFriends.add(userToDelete);
+					for (int i = 0; i < onlineFriends.size(); i++)
+					{
+						if(onlineFriends.get(i).equals(userToDelete))
+						{
+							onlineFriends.remove(i);
+							break;
+						}
+					}
+					
+					for (int i = 0; i < offlineFriends.size(); i++)
+					{
+						if(offlineFriends.get(i).equals(userToDelete))
+						{
+							offlineFriends.remove(i);
+							break;
+						}
+					}
+					updateList(onlineFriends, offlineFriends, requestingFriends, blockedFriends);
+				}
+
+				if (objectReceived.getCode().equals("getMessages"))
+				{
+					Conversation convo = conversationMap.get(objectReceived.getUsername());
+					System.out.println(convo.messages.getText());
+					HTMLDocument doc = new HTMLDocument();
+					doc = convo.getDoc();
+					String paneMessage = "";
+					
+					try {
+						paneMessage = doc.getText(0, doc.getLength());
+					} catch (BadLocationException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					if (paneMessage.isEmpty())
+						convo.writeOlderMessage(objectReceived.getOldMessages().get(0), 0);
+					else
+						convo.writeOlderMessage(objectReceived.getOldMessages().get(0), 1);
+					for (int i = 2; i < objectReceived.getOldMessages().size(); i++)
+						convo.writeOlderMessage(objectReceived.getOldMessages().get(i), 1);
+				}
+					
 			}
 		};
 		worker.execute();
@@ -453,11 +778,40 @@ public class FriendsFrame extends JFrame {
 					}
 				};
 				worker.execute();
-				
-				
 			}		
 			
 		});
 	}
 	
+	public void addFriendHandler()
+	{
+		btnAddFriend.addActionListener(new ActionListener()
+		{
+
+			@Override
+			public void actionPerformed(ActionEvent arg0) 
+			{
+				addFriend = new AddFriend(client);
+				addFriend.setVisible(true);
+				addFriend.start();
+			}
+		});
+	}
+	
+	public void blockFriendHandler()
+	{
+		btnBlockFriend.addActionListener(new ActionListener()
+		{
+			@Override
+			public void actionPerformed(ActionEvent arg0) 
+			{
+				// TODO Auto-generated method stub
+				blockFriend = new BlockFriend(client);
+				blockFriend.setVisible(true);
+				blockFriend.start();
+			}
+			
+		});
+	}
+		
 }

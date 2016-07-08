@@ -10,6 +10,7 @@ import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 import javax.swing.ImageIcon;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -50,7 +51,12 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	private final String LOGINID = "login";
 	
-	private String username;
+	public static String getUsername() {
+		return username;
+	}
+
+	private static String username;
+	public static boolean connected;
 	private String password;
 	String lineReceived;
 	SignUpClient receivedObject;
@@ -64,7 +70,6 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	public LoginFrame(Client client)
 	{
-		
 		this.client = client;
 	}
 	
@@ -89,7 +94,6 @@ public class LoginFrame extends JFrame implements Runnable{
 	{
 		WindowEvent winclosing = new WindowEvent(this, WindowEvent.WINDOW_CLOSING);
 		Toolkit.getDefaultToolkit().getSystemEventQueue().postEvent(winclosing);
-		
 	}
 
 	public void initialize() 
@@ -214,8 +218,15 @@ public class LoginFrame extends JFrame implements Runnable{
 	
 	public void setUpHandlers()
 	{
-		loginHandler();
-		signUpHandler();
+		//while (connected)
+		//{
+			loginHandler();
+			signUpHandler();
+		//}
+		//JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
+		//Client.close();
+		//dispose();
+		//NotLoggedSystemTray.removeSystemTrayIcon();
 	}
 	public void loginHandler()
 	{
@@ -225,7 +236,7 @@ public class LoginFrame extends JFrame implements Runnable{
 				SwingWorker<Void, String> worker = new SwingWorker<Void, String>()
 				{
 					@Override
-					protected Void doInBackground() throws Exception 
+					protected Void doInBackground() throws Exception
 					{
 						SignUpClient sendObject = new SignUpClient();
 						username = userInput.getText();
@@ -290,7 +301,10 @@ public class LoginFrame extends JFrame implements Runnable{
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 						Client.close();
+						dispose();
+						notLoggedTray.removeSystemTrayIcon();
 					}
 						
 				return null;
@@ -300,9 +314,7 @@ public class LoginFrame extends JFrame implements Runnable{
 			{
 				if(receivedObject.getCode().equals(OKAY))
 				{
-					//close();
 					dispose();
-					//setVisible(false);
 					NotLoggedSystemTray.removeSystemTrayIcon();
 					friendsFrame = new FriendsFrame(client);
 					friendsFrame.setTitle("ChatUp! - " + username);
