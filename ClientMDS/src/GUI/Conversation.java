@@ -2,6 +2,7 @@ package GUI;
 import client.*;
 import emoji.EmojiMap;
 import server.SignUpClient;
+import systemtrays.LoggedSystemTray;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -21,6 +22,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.BadLocationException;
@@ -123,7 +125,10 @@ public class Conversation extends JFrame {
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 						Client.close();
+						dispose();
+						LoggedSystemTray.removeSystemTrayIcon();
 						break;
 					}
 				}

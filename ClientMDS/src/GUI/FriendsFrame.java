@@ -324,7 +324,10 @@ public class FriendsFrame extends JFrame {
 				catch(IOException ioe)
 				{
 					ioe.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 					Client.close();
+					dispose();
+					LoggedSystemTray.removeSystemTrayIcon();
 				}
 				return null;
 			}
@@ -607,7 +610,10 @@ public class FriendsFrame extends JFrame {
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 						Client.close();
+						dispose();
+						LoggedSystemTray.removeSystemTrayIcon();
 						break;
 					}
 				}

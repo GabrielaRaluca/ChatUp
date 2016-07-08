@@ -1,7 +1,6 @@
 package GUI;
 
 import java.awt.BorderLayout;
-import java.awt.FlowLayout;
 
 import javax.swing.JButton;
 import javax.swing.JDialog;
@@ -12,11 +11,9 @@ import client.Client;
 import server.SignUpClient;
 
 import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
 import javax.swing.GroupLayout;
 import javax.swing.GroupLayout.Alignment;
 import javax.swing.JLabel;
-import javax.swing.LayoutStyle.ComponentPlacement;
 import javax.swing.SwingWorker;
 
 import java.awt.Font;
@@ -25,14 +22,12 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.awt.Color;
 
 public class AddFriend extends JDialog 
 {
 	private final JPanel contentPanel = new JPanel();
 	private JTextField textField;
-	private JPanel buttonPane;
 	private JButton addButton;
 	private JButton cancelButton;
 	
@@ -40,19 +35,9 @@ public class AddFriend extends JDialog
 	
 	private final String ADDFRIEND = "addfriend";
 	private JLabel lblWrongUsername;
-	
-	private SignUpClient objectReceived;
-	
+		
 	Client client;
 
-	/**
-	 * Launch the application.
-	 */
-	
-
-	/**
-	 * Create the dialog.
-	 */
 	public JLabel getLblWrongUsername() 
 	{
 		return lblWrongUsername;

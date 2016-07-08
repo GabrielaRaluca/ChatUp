@@ -5,6 +5,7 @@ import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 
 import GUI.*;
@@ -26,6 +27,11 @@ public class Client
 	{
 		this.serverIP = IP;
 		this.portNumber = port;
+		
+	}
+	
+	public void connect()
+	{
 		try
 		{
 			clientSocket = new Socket(serverIP, portNumber);
@@ -33,6 +39,7 @@ public class Client
 		catch(IOException ioe)
 		{
 			ioe.printStackTrace();
+			JOptionPane.showMessageDialog(null, "You cannot connect to the server right now. Please try again later!", "Connection Refused", JOptionPane.ERROR_MESSAGE);
 		}
 	}
 	

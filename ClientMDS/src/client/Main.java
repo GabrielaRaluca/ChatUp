@@ -14,7 +14,9 @@ public class Main
 	
 	public static void main(String[] args) 
 	{
+		
 		client = new Client(SERVERIP, PORT);
+		client.connect();
 		client.setUpStreams();
 		SwingUtilities.invokeLater(new LoginFrame(client));
 	}

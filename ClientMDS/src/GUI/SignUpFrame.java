@@ -10,6 +10,8 @@ import javax.swing.border.EmptyBorder;
 
 import client.Client;
 import server.SignUpClient;
+import systemtrays.LoggedSystemTray;
+import systemtrays.NotLoggedSystemTray;
 
 import java.awt.GridBagLayout;
 import java.awt.Image;
@@ -23,6 +25,8 @@ import java.io.IOException;
 import java.net.URL;
 
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+
 import java.awt.Font;
 import javax.swing.JTextField;
 import javax.swing.SwingWorker;
@@ -70,6 +74,8 @@ public class SignUpFrame extends JFrame
 	private final String TAKEN = "Email already taken";
 	private final String MISMATCH = "Password mismatch";
 	private final String OKAY = "okay";
+	
+	private LoginFrame login;
 
 	public SignUpFrame(Client client)
 	{
@@ -323,7 +329,10 @@ public class SignUpFrame extends JFrame
 					catch(IOException ioe)
 					{
 						ioe.printStackTrace();
+						JOptionPane.showMessageDialog(null, "Server connection failed. Please try again later!", "Connection failure", JOptionPane.ERROR_MESSAGE);
 						Client.close();
+						dispose();
+						NotLoggedSystemTray.removeSystemTrayIcon();
 						break;
 					}
 				}

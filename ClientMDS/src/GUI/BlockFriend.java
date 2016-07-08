@@ -2,7 +2,6 @@ package GUI;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -27,7 +26,6 @@ public class BlockFriend extends JDialog {
 
 	private final JPanel contentPanel = new JPanel();
 	private JTextField textField;
-	private JPanel buttonPane;
 	private JButton blockButton;
 	private JButton cancelButton;
 	
@@ -36,29 +34,14 @@ public class BlockFriend extends JDialog {
 	private final String BLOCKFRIEND = "blockfriend";
 	private JLabel lblWrongUsername;
 	
-	private SignUpClient objectReceived; 
 	Client client;
 
-	/**
-	 * Launch the application.
-	 */
-	/*public static void main(String[] args) {
-		try {
-			BlockFriend dialog = new BlockFriend(client);
-			dialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
-			dialog.setVisible(true);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-	}*/
+
 	public JLabel getLblWrongUsername() 
 	{
 		return lblWrongUsername;
 	}
 
-	/**
-	 * Create the dialog.
-	 */
 	public BlockFriend(Client client) 
 	{
 		this.client = client;
