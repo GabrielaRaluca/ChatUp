@@ -17,6 +17,8 @@ public class ClientThreadHandlers {
 			SignUpClient objectToSend = new SignUpClient();
 			ArrayList<String> online = new ArrayList<String>();
 			ArrayList<String> offline = new ArrayList<String>();
+			ArrayList<String> pending = new ArrayList<String>();
+			ArrayList<String> blockedFriends = new ArrayList<String>();
 			int i;
 
 			// create an object with 2 lists: the online friends and the
@@ -27,7 +29,9 @@ public class ClientThreadHandlers {
 			// add them to that list, then send the object
 
 			client.friendsNames = JDBCHandlers.getFriends(client.name);
-
+			pending = JDBCHandlers.getPendingRequests(client.name);
+			blockedFriends = JDBCHandlers.getBlockedFriends(client.name);
+			
 			for (i = 0; i < client.friendsNames.size(); i++) {
 				if (ClientThreadHandlers.isOnline(client.friendsNames.get(i), client.connectedUsers)) {
 					online.add(client.friendsNames.get(i));
@@ -35,7 +39,8 @@ public class ClientThreadHandlers {
 					offline.add(client.friendsNames.get(i));
 				}
 			}
-
+			objectToSend.setBlockedFriends(blockedFriends);
+			objectToSend.setPending(pending);
 			objectToSend.setOnlineFriends(online);
 			objectToSend.setOfflineFriends(offline);
 			try {
@@ -67,7 +72,8 @@ public class ClientThreadHandlers {
 
 			for (i = 0; i < client.friendsNames.size(); i++) {
 				friend = ClientThreadHandlers.getFriendByUsername(client.friendsNames.get(i), client.connectedUsers);
-				client.friends.add(friend);
+				if(friend != null)
+					client.friends.add(friend);
 			}
 			SignUpClient objectToSend = new SignUpClient();
 			objectToSend.setCode(Codes.NEWUSER);
@@ -75,9 +81,13 @@ public class ClientThreadHandlers {
 			for (i = 0; i < client.friends.size(); i++) {
 				if (client.friends.get(i) != null)
 					try {
-						client.friends.get(i).output.reset();
-						client.friends.get(i).output.writeObject(objectToSend);
-						client.friends.get(i).output.flush();
+						synchronized(client.friends.get(i).output)
+						{
+							client.friends.get(i).output.reset();
+							client.friends.get(i).output.writeObject(objectToSend);
+							client.friends.get(i).output.flush();
+						}
+						
 						
 					} catch (IOException e) {
 						// TODO Auto-generated catch block
@@ -101,7 +111,8 @@ public class ClientThreadHandlers {
 
 			for (i = 0; i < client.friendsNames.size(); i++) {
 				friend = ClientThreadHandlers.getFriendByUsername(client.friendsNames.get(i), client.connectedUsers);
-				client.friends.add(friend);
+				if(friend != null)
+					client.friends.add(friend);
 			}
 			SignUpClient objectToSend = new SignUpClient();
 			objectToSend.setCode(Codes.SIGNEDOUT);
@@ -111,9 +122,13 @@ public class ClientThreadHandlers {
 				if (client.friends.get(i) != null)
 					{
 						try {
-							client.friends.get(i).output.reset();
-							client.friends.get(i).output.writeObject(objectToSend);
-							client.friends.get(i).output.flush();
+							synchronized(client.friends.get(i).output)
+							{
+								client.friends.get(i).output.reset();
+								client.friends.get(i).output.writeObject(objectToSend);
+								client.friends.get(i).output.flush();
+							}
+							
 						} catch (IOException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -155,7 +170,8 @@ public class ClientThreadHandlers {
 
 			for (i = 0; i < client.friendsNames.size(); i++) {
 				friend = ClientThreadHandlers.getFriendByUsername(client.friendsNames.get(i), client.connectedUsers);
-				client.friends.add(friend);
+				if(friend != null)
+					client.friends.add(friend);
 			}
 			SignUpClient objectToSend = new SignUpClient();
 			objectToSend.setCode(Codes.SIGNEDOUT);
@@ -182,14 +198,79 @@ public class ClientThreadHandlers {
 	 	
 	}
 	
-	
+	public static void addNewFriend(ClientThread client, SignUpClient newFriend)
+	{
+		String myName = client.name;
+		String friendsName = newFriend.getUsername();
+		ClientThread friendUser = new ClientThread();
+		
+
+		synchronized(client)
+		{
+			String result = JDBCHandlers.addFriend(myName, friendsName);
+			boolean announceFriend = false;
+			SignUpClient confirmation = new SignUpClient();
+			SignUpClient confirmationForNewFriend = new SignUpClient();
+			if(result == null)
+			{
+				confirmation.setCode(Codes.REQUESTSENT);
+				announceFriend = true;
+			}
+			else if(result.equals("Username does not exist in the database"))
+			{
+				
+				confirmation.setCode(Codes.INVALID);
+				
+			}
+			else
+			{
+				confirmation.setCode(Codes.ALREADYFRIENDS);
+			}
+			try {
+				client.output.reset();
+				client.output.writeObject(confirmation);
+				client.output.flush();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			//trimit si celui care a primit cererea de prietenie ca are o cerere noua, daca e online
+			if(announceFriend)
+			{
+				friendUser = getFriendByUsername(friendsName, client.connectedUsers);
+				if(friendUser != null)
+				{
+					confirmationForNewFriend.setCode(Codes.NEWPENDINGUSER);
+					confirmationForNewFriend.setUsername(myName);
+					try {
+						synchronized(friendUser.output)
+						{
+							friendUser.output.reset();
+							friendUser.output.writeObject(confirmationForNewFriend);
+							friendUser.output.flush();
+						}
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+			}
+			
+			
+		}
+		
+		//confirmation.setCode();
+		
+	}
 	public static void authenticationMessage(SignUpClient clientObject, ClientThread client) throws IOException, ClassNotFoundException
 	{
 	
 			String code = clientObject.getCode();
 			SignUpClient response = new SignUpClient();
 			
-			if(code.equals(client.SIGNUPID))
+			if(code.equals(Codes.SIGNUPID))
 			{
 				String username = clientObject.getUsername();
 				String password = clientObject.getPassword();
@@ -246,7 +327,7 @@ public class ClientThreadHandlers {
 				
 			}
 			
-			if(code.equals(client.LOGINID))
+			if(code.equals(Codes.LOGINID))
 			{
 				
 				String username = clientObject.getUsername();
@@ -281,8 +362,104 @@ public class ClientThreadHandlers {
 			}
 				
 		}
-
 	
+		public static void updateOnlineFriendsList(ClientThread client, SignUpClient newFriend)
+		{
+			synchronized(client)
+			{
+				String me = client.name;
+				String friend = newFriend.getUsername();
+				ClientThread friendUser = new ClientThread();
+				SignUpClient confirmation = new SignUpClient();
+				SignUpClient confirmationForNewFriend = new SignUpClient();
+				//verificam daca prietenul caruia i-am dat accept e online si daca da, anuntam ca e online, si il anuntam
+				//si pe el ca sunt online
+				friendUser = getFriendByUsername(friend, client.connectedUsers);
+				if(isOnline(friend, client.connectedUsers)) //doar daca e online cel nou ii anuntam 
+				{
+					confirmation.setCode(Codes.NEWUSER);
+					confirmation.setUsername(friend);
+					confirmationForNewFriend.setCode(Codes.NEWUSER);
+					confirmationForNewFriend.setUsername(me);
+					try {
+						client.output.reset();
+						client.output.writeObject(confirmation);
+						client.output.flush();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					try {
+						synchronized(friendUser)
+						{
+							friendUser.output.reset();
+							friendUser.output.writeObject(confirmationForNewFriend);
+							friendUser.output.flush();
+						}
+						
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
+			
+				}
+			}
+		
+		}
+		public static void blockFriend(ClientThread client, SignUpClient friendToBlock)
+		{
+			String clientUsername = client.name;
+			String friendUsername = friendToBlock.getUsername();
+			SignUpClient response = new SignUpClient();
+			synchronized(client)
+			{
+				String result = JDBCHandlers.blockFriend(clientUsername, friendUsername);
+				if(result != null)
+					response.setCode(Codes.INVALIDFORBLOCK);
+				else
+				{
+					response.setCode(Codes.BLOCKEDUSER);
+					response.setUsername(friendUsername);
+				}
+					
+				try {
+					client.output.reset();
+					client.output.writeObject(response);
+					client.output.flush();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			
+			
+		}
+		
+		public static void announceBlockedFriendOffline(ClientThread client, ClientThread blockedFriend)
+		{//daca am dat block cuiva, il anuntam pe acela ca suntem offline, dupa ce va intra din nou oricum nu o sa
+			//ii mai aparem in lista
+			SignUpClient objectToSend = new SignUpClient();
+			objectToSend.setCode(Codes.SIGNEDOUT);
+			objectToSend.setUsername(client.name);
+			synchronized(client)
+			{
+				try
+				{	synchronized(blockedFriend.output)
+					{
+						blockedFriend.output.reset();
+						blockedFriend.output.writeObject(objectToSend);
+						blockedFriend.output.flush();
+					}
+					
+				}
+				 catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+			}
+		}
+		
 		public static ClientThread getFriendByUsername(String username, Vector<ClientThread> connectedUsers)
 		{ //returns the user that has the username = username
 			int i;
